@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+{% block page_header %}Administración de Usuarios{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Gestión de Usuarios</h1>
+        <p class="page-subtitle">Administrar usuarios y permisos del sistema</p>
+    </div>
+    <a href="{{ url_for('admin.nuevo_usuario') }}" class="btn btn-primary btn-action">
+        <i class="bi bi-person-plus"></i> Nuevo Usuario
+    </a>
+</div>
+
+<!-- Resumen de roles -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon planes">
+                <i class="bi bi-people"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ usuarios|length }}</div>
+                <div class="stat-label">Total Usuarios</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon riesgos">
+                <i class="bi bi-person-check"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ usuarios|selectattr('activo')|list|length }}</div>
+                <div class="stat-label">Usuarios Activos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon abiertos">
+                <i class="bi bi-person-x"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ usuarios|rejectattr('activo')|list|length }}</div>
+                <div class="stat-label">Usuarios Inactivos</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-container">
+    <table id="tablaUsuarios" class="table table-hover" style="width:100%">
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Nombre Completo</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Último Acceso</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in usuarios %}
+            <tr>
+                <td><strong>{{ user.username }}</strong></td>
+                <td>{{ user.nombre_completo }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                    {% if user.rol == 'admin' %}
+                        <span class="badge-estado badge-critico">Admin</span>
+                    {% elif user.rol == 'editor' %}
+                        <span class="badge-estado badge-en-proceso">Editor</span>
+                    {% else %}
+                        <span class="badge-estado badge-cerrado">Viewer</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.activo %}
+                        <span class="badge-estado badge-cerrado">Activo</span>
+                    {% else %}
+                        <span class="badge-estado badge-abierto">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td>{{ user.ultimo_acceso.strftime('%d/%m/%Y %H:%M') if user.ultimo_acceso else 'Nunca' }}</td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <a href="{{ url_for('admin.editar_usuario', user_id=user.id) }}"
+                           class="btn btn-outline-primary btn-sm" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% if user.id != current_user.id %}
+                        <a href="{{ url_for('admin.toggle_usuario', user_id=user.id) }}"
+                           class="btn btn-outline-{{ 'danger' if user.activo else 'success' }} btn-sm"
+                           title="{{ 'Desactivar' if user.activo else 'Activar' }}">
+                            <i class="bi bi-{{ 'person-x' if user.activo else 'person-check' }}"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Descripción de Roles -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-info-circle"></i> Descripción de Roles
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6><span class="badge-estado badge-critico">Admin</span></h6>
+                <p class="small text-muted">Acceso completo: crear, editar registros, gestionar usuarios y configurar el sistema.</p>
+            </div>
+            <div class="col-md-4">
+                <h6><span class="badge-estado badge-en-proceso">Editor</span></h6>
+                <p class="small text-muted">Puede crear y editar registros de eventos, planes y riesgos. No puede gestionar usuarios.</p>
+            </div>
+            <div class="col-md-4">
+                <h6><span class="badge-estado badge-cerrado">Viewer</span></h6>
+                <p class="small text-muted">Solo puede visualizar la información. No puede crear ni modificar registros.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#tablaUsuarios').DataTable({
+        language: DATATABLES_ES,
+        pageLength: 25
+    });
+});
+</script>
+{% endblock %}

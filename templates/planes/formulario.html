@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if plan else 'Nuevo' }} Plan de Acción{% endblock %}
+{% block page_header %}{{ 'Editar' if plan else 'Nuevo' }} Plan de Acción{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'Editar' if plan else 'Nuevo' }} Plan de Acción</h1>
+        <p class="page-subtitle">{{ 'Modificar plan existente' if plan else 'Registrar un nuevo plan de acción' }}</p>
+    </div>
+    <a href="{{ url_for('planes.lista') }}" class="btn btn-outline-secondary btn-action">
+        <i class="bi bi-arrow-left"></i> Volver a Lista
+    </a>
+</div>
+
+<form method="POST" class="card">
+    <div class="card-body">
+        <!-- Información del Plan -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-tag"></i> Información del Plan
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Código del Plan *</label>
+                    <input type="text" class="form-control" name="codigo_plan"
+                           value="{{ plan.codigo_plan if plan else '' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Estatus</label>
+                    <select class="form-select" name="estatus">
+                        <option value="">Seleccionar...</option>
+                        {% if catalogos.get('estados') %}
+                            {% for estado in catalogos.estados %}
+                            <option value="{{ estado.get('nombre', estado.get('descripcion', '')) }}"
+                                {{ 'selected' if plan and plan.estatus == estado.get('nombre', estado.get('descripcion', '')) }}>
+                                {{ estado.get('nombre', estado.get('descripcion', '')) }}
+                            </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="Pendiente" {{ 'selected' if plan and plan.estatus == 'Pendiente' }}>Pendiente</option>
+                            <option value="En Ejecución" {{ 'selected' if plan and plan.estatus == 'En Ejecución' }}>En Ejecución</option>
+                            <option value="Completado" {{ 'selected' if plan and plan.estatus == 'Completado' }}>Completado</option>
+                            <option value="Vencido" {{ 'selected' if plan and plan.estatus == 'Vencido' }}>Vencido</option>
+                            <option value="Cerrado" {{ 'selected' if plan and plan.estatus == 'Cerrado' }}>Cerrado</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Prioridad</label>
+                    <select class="form-select" name="prioridad">
+                        <option value="">Seleccionar...</option>
+                        <option value="Alta" {{ 'selected' if plan and plan.prioridad == 'Alta' }}>Alta</option>
+                        <option value="Media" {{ 'selected' if plan and plan.prioridad == 'Media' }}>Media</option>
+                        <option value="Baja" {{ 'selected' if plan and plan.prioridad == 'Baja' }}>Baja</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tipo de Plan de Acción</label>
+                    <input type="text" class="form-control" name="tipo_plan_accion"
+                           value="{{ plan.tipo_plan_accion if plan else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Origen del Plan</label>
+                    <select class="form-select" name="origen_plan_accion">
+                        <option value="">Seleccionar...</option>
+                        <option value="Evento" {{ 'selected' if plan and plan.origen_plan_accion == 'Evento' }}>Evento de Pérdida</option>
+                        <option value="Auditoría" {{ 'selected' if plan and plan.origen_plan_accion == 'Auditoría' }}>Auditoría</option>
+                        <option value="RCSA" {{ 'selected' if plan and plan.origen_plan_accion == 'RCSA' }}>Autoevaluación (RCSA)</option>
+                        <option value="Regulador" {{ 'selected' if plan and plan.origen_plan_accion == 'Regulador' }}>Regulador</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Código de Riesgo Asociado</label>
+                    <input type="text" class="form-control" name="codigo_riesgo"
+                           value="{{ plan.codigo_riesgo if plan else '' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Descripción del Plan de Acción *</label>
+                    <textarea class="form-control" name="plan_accion" rows="3" required>{{ plan.plan_accion if plan else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Responsables -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-people"></i> Responsables
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">VP Responsable</label>
+                    <input type="text" class="form-control" name="vp_responsable"
+                           value="{{ plan.vp_responsable if plan else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Dirección Responsable</label>
+                    <input type="text" class="form-control" name="direccion_responsable"
+                           value="{{ plan.direccion_responsable if plan else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Responsable</label>
+                    <input type="text" class="form-control" name="responsable"
+                           value="{{ plan.responsable if plan else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Fechas -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-calendar3"></i> Fechas del Plan
+            </div>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Creación</label>
+                    <input type="date" class="form-control" name="fecha_creacion_plan"
+                           value="{{ plan.fecha_creacion_plan if plan else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Compromiso Inicial</label>
+                    <input type="date" class="form-control" name="fecha_compromiso_inicial"
+                           value="{{ plan.fecha_compromiso_inicial if plan else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Compromiso Actual</label>
+                    <input type="date" class="form-control" name="fecha_compromiso_actual"
+                           value="{{ plan.fecha_compromiso_actual if plan else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha de Cierre</label>
+                    <input type="date" class="form-control" name="fecha_cierre"
+                           value="{{ plan.fecha_cierre if plan else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a href="{{ url_for('planes.lista') }}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg"></i> {{ 'Actualizar' if plan else 'Guardar' }} Plan
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}

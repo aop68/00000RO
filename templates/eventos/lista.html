@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Eventos de Riesgo{% endblock %}
+{% block page_header %}Matriz de Eventos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Eventos de Riesgo Operacional</h1>
+        <p class="page-subtitle">Registro de eventos de pérdida operacional</p>
+    </div>
+    {% if current_user.puede_editar %}
+    <a href="{{ url_for('eventos.nuevo') }}" class="btn btn-primary btn-action">
+        <i class="bi bi-plus-lg"></i> Nuevo Evento
+    </a>
+    {% endif %}
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-circle"></i> {{ error }}
+</div>
+{% endif %}
+
+<div class="table-container">
+    <table id="tablaEventos" class="table table-hover" style="width:100%">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                <th>Categoría</th>
+                <th>Fecha Descubrimiento</th>
+                <th>Pérdida Bruta (DOP)</th>
+                <th>Pérdida Neta (DOP)</th>
+                <th>Estado</th>
+                <th>Área Origen</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for evento in eventos %}
+            <tr>
+                <td><strong>{{ evento.codigo_evento or '' }}</strong></td>
+                <td><span class="truncate d-inline-block" title="{{ evento.descripcion_evento or '' }}">{{ evento.descripcion_evento or '' }}</span></td>
+                <td>{{ evento.tipo_evento or '' }}</td>
+                <td>{{ evento.categoria_evento or '' }}</td>
+                <td>{{ evento.fecha_descubrimiento or '' }}</td>
+                <td class="monto">{{ "{:,.2f}".format(evento.monto_perdida_bruta_dop|float) if evento.monto_perdida_bruta_dop else '-' }}</td>
+                <td class="monto">{{ "{:,.2f}".format(evento.monto_perdida_neta_dop|float) if evento.monto_perdida_neta_dop else '-' }}</td>
+                <td>
+                    {% set estado = evento.estado_investigacion or '' %}
+                    <span class="badge-estado {% if 'Abierto' in estado %}badge-abierto{% elif 'Proceso' in estado or 'Investigación' in estado %}badge-en-proceso{% elif 'Cerrado' in estado %}badge-cerrado{% else %}badge-abierto{% endif %}">
+                        {{ estado }}
+                    </span>
+                </td>
+                <td>{{ evento.area_origen or '' }}</td>
+                <td>
+                    {% if current_user.puede_editar %}
+                    <a href="{{ url_for('eventos.editar', evento_id=evento.evento_id) }}" class="btn btn-outline-primary btn-sm" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#tablaEventos').DataTable({
+        language: DATATABLES_ES,
+        order: [[4, 'desc']],
+        pageLength: 25,
+        responsive: true
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Planes de Acción{% endblock %}
+{% block page_header %}Planes de Acción{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Planes de Acción</h1>
+        <p class="page-subtitle">Seguimiento de planes de mitigación y remediación</p>
+    </div>
+    {% if current_user.puede_editar %}
+    <a href="{{ url_for('planes.nuevo') }}" class="btn btn-primary btn-action">
+        <i class="bi bi-plus-lg"></i> Nuevo Plan
+    </a>
+    {% endif %}
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-circle"></i> {{ error }}
+</div>
+{% endif %}
+
+<div class="table-container">
+    <table id="tablaPlanes" class="table table-hover" style="width:100%">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Plan de Acción</th>
+                <th>Estatus</th>
+                <th>Prioridad</th>
+                <th>Origen</th>
+                <th>Responsable</th>
+                <th>Fecha Compromiso</th>
+                <th>Fecha Cierre</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in planes %}
+            <tr>
+                <td><strong>{{ plan.codigo_plan or '' }}</strong></td>
+                <td><span class="truncate d-inline-block" title="{{ plan.plan_accion or '' }}">{{ plan.plan_accion or '' }}</span></td>
+                <td>
+                    {% set estatus = plan.estatus or '' %}
+                    <span class="badge-estado {% if estatus == 'Abierto' or estatus == 'Pendiente' %}badge-abierto{% elif 'Proceso' in estatus or 'Ejecución' in estatus %}badge-en-proceso{% elif estatus == 'Cerrado' or estatus == 'Completado' %}badge-cerrado{% elif 'Vencido' in estatus %}badge-critico{% else %}badge-abierto{% endif %}">
+                        {{ estatus }}
+                    </span>
+                </td>
+                <td>
+                    {% set prioridad = plan.prioridad or '' %}
+                    <span class="badge-estado {% if prioridad == 'Alta' %}badge-alta{% elif prioridad == 'Media' %}badge-media{% else %}badge-baja{% endif %}">
+                        {{ prioridad }}
+                    </span>
+                </td>
+                <td>{{ plan.origen_plan_accion or '' }}</td>
+                <td>{{ plan.responsable or '' }}</td>
+                <td>{{ plan.fecha_compromiso_actual or plan.fecha_compromiso_inicial or '' }}</td>
+                <td>{{ plan.fecha_cierre or '-' }}</td>
+                <td>
+                    {% if current_user.puede_editar %}
+                    <a href="{{ url_for('planes.editar', plan_id=plan.plan_id) }}" class="btn btn-outline-primary btn-sm" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#tablaPlanes').DataTable({
+        language: DATATABLES_ES,
+        order: [[6, 'asc']],
+        pageLength: 25,
+        responsive: true
+    });
+});
+</script>
+{% endblock %}

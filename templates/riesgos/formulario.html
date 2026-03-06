@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if riesgo else 'Nuevo' }} Riesgo{% endblock %}
+{% block page_header %}{{ 'Editar' if riesgo else 'Nuevo' }} Riesgo y Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'Editar' if riesgo else 'Nuevo' }} Riesgo y Control</h1>
+        <p class="page-subtitle">{{ 'Modificar riesgo y control existente' if riesgo else 'Registrar un nuevo riesgo y control asociado' }}</p>
+    </div>
+    <a href="{{ url_for('riesgos.lista') }}" class="btn btn-outline-secondary btn-action">
+        <i class="bi bi-arrow-left"></i> Volver a Lista
+    </a>
+</div>
+
+<form method="POST" class="card">
+    <div class="card-body">
+        <!-- Identificación del Riesgo -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-shield-exclamation"></i> Identificación del Riesgo
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Código del Riesgo *</label>
+                    <input type="text" class="form-control" name="codigo_riesgo"
+                           value="{{ riesgo.codigo_riesgo if riesgo else '' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Categoría de Riesgo</label>
+                    <input type="text" class="form-control" name="categoria_riesgo"
+                           value="{{ riesgo.categoria_riesgo if riesgo else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Frecuencia Inherente</label>
+                    <input type="text" class="form-control" name="frecuencia_inherente"
+                           value="{{ riesgo.frecuencia_inherente if riesgo else '' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Descripción del Riesgo *</label>
+                    <textarea class="form-control" name="descripcion_riesgo" rows="3" required>{{ riesgo.descripcion_riesgo if riesgo else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Taxonomía -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-diagram-3"></i> Taxonomía del Riesgo
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Nivel 1</label>
+                    <input type="text" class="form-control" name="riesgo_nivel_1"
+                           value="{{ riesgo.riesgo_nivel_1 if riesgo else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nivel 2</label>
+                    <input type="text" class="form-control" name="riesgo_nivel_2"
+                           value="{{ riesgo.riesgo_nivel_2 if riesgo else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nivel 3</label>
+                    <input type="text" class="form-control" name="riesgo_nivel_3"
+                           value="{{ riesgo.riesgo_nivel_3 if riesgo else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Proceso y Causa -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-gear"></i> Proceso y Causa
+            </div>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Macroproceso</label>
+                    <input type="text" class="form-control" name="macroproceso"
+                           value="{{ riesgo.macroproceso if riesgo else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Proceso</label>
+                    <input type="text" class="form-control" name="proceso"
+                           value="{{ riesgo.proceso if riesgo else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Factor de Riesgo</label>
+                    <input type="text" class="form-control" name="factor_riesgo"
+                           value="{{ riesgo.factor_riesgo if riesgo else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Impacto Financiero (DOP)</label>
+                    <input type="number" step="0.01" class="form-control" name="impacto_financiero_dop"
+                           value="{{ riesgo.impacto_financiero_dop if riesgo else '' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Causa Raíz</label>
+                    <textarea class="form-control" name="causa_raiz" rows="2">{{ riesgo.causa_raiz if riesgo else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Asociado -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-shield-check"></i> Control Asociado
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Tipo de Control</label>
+                    <select class="form-select" name="tipo_control">
+                        <option value="">Seleccionar...</option>
+                        {% if catalogos.get('tipos_control') %}
+                            {% for tipo in catalogos.tipos_control %}
+                            <option value="{{ tipo.get('nombre', tipo.get('descripcion', '')) }}"
+                                {{ 'selected' if riesgo and riesgo.tipo_control == tipo.get('nombre', tipo.get('descripcion', '')) }}>
+                                {{ tipo.get('nombre', tipo.get('descripcion', '')) }}
+                            </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="Preventivo" {{ 'selected' if riesgo and riesgo.tipo_control == 'Preventivo' }}>Preventivo</option>
+                            <option value="Detectivo" {{ 'selected' if riesgo and riesgo.tipo_control == 'Detectivo' }}>Detectivo</option>
+                            <option value="Correctivo" {{ 'selected' if riesgo and riesgo.tipo_control == 'Correctivo' }}>Correctivo</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Frecuencia de Ejecución</label>
+                    <input type="text" class="form-control" name="frecuencia_ejecucion"
+                           value="{{ riesgo.frecuencia_ejecucion if riesgo else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Grado de Manualidad</label>
+                    <select class="form-select" name="grado_manualidad">
+                        <option value="">Seleccionar...</option>
+                        <option value="Manual" {{ 'selected' if riesgo and riesgo.grado_manualidad == 'Manual' }}>Manual</option>
+                        <option value="Semi-Automático" {{ 'selected' if riesgo and riesgo.grado_manualidad == 'Semi-Automático' }}>Semi-Automático</option>
+                        <option value="Automático" {{ 'selected' if riesgo and riesgo.grado_manualidad == 'Automático' }}>Automático</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Descripción del Control</label>
+                    <textarea class="form-control" name="descripcion_control" rows="3">{{ riesgo.descripcion_control if riesgo else '' }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="documentado" name="control_documentado"
+                               {{ 'checked' if riesgo and riesgo.control_documentado }}>
+                        <label class="form-check-label" for="documentado">Control Documentado</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="remediacion" name="control_en_remediacion"
+                               {{ 'checked' if riesgo and riesgo.control_en_remediacion }}>
+                        <label class="form-check-label" for="remediacion">Control en Remediación</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Responsables -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-people"></i> Responsables
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">VP Responsable del Procedimiento</label>
+                    <input type="text" class="form-control" name="vp_responsable_procedimiento"
+                           value="{{ riesgo.vp_responsable_procedimiento if riesgo else '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Dirección Responsable del Control</label>
+                    <input type="text" class="form-control" name="direccion_responsable_control"
+                           value="{{ riesgo.direccion_responsable_control if riesgo else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a href="{{ url_for('riesgos.lista') }}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg"></i> {{ 'Actualizar' if riesgo else 'Guardar' }} Riesgo
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}

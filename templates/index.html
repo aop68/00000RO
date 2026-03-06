@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio{% endblock %}
+{% block page_header %}Panel Principal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Panel Principal</h1>
+        <p class="page-subtitle">Resumen de la gestión de riesgo operacional</p>
+    </div>
+</div>
+
+{% if error_conexion %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    No se pudo conectar a la base de datos de Fabric. Las estadísticas no están disponibles.
+    Verifique la configuración de conexión.
+</div>
+{% endif %}
+
+<!-- Tarjetas de estadísticas -->
+<div class="row g-3 mb-4">
+    <div class="col-xl col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon eventos">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ stats.total_eventos }}</div>
+                <div class="stat-label">Eventos Registrados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon planes">
+                <i class="bi bi-list-check"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ stats.total_planes }}</div>
+                <div class="stat-label">Planes de Acción</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon riesgos">
+                <i class="bi bi-shield-exclamation"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ stats.total_riesgos }}</div>
+                <div class="stat-label">Riesgos y Controles</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon abiertos">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div>
+                <div class="stat-value">{{ stats.planes_abiertos }}</div>
+                <div class="stat-label">Planes Abiertos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon perdida">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div>
+                <div class="stat-value">
+                    {% if stats.perdida_total != '-' %}
+                        {{ "{:,.0f}".format(stats.perdida_total|float) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+                <div class="stat-label">Pérdida Neta Total (DOP)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accesos rápidos -->
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size:40px"></i>
+                <h5 class="mt-3 mb-2">Eventos de Riesgo</h5>
+                <p class="text-muted small">Gestión de eventos de pérdida operacional</p>
+                <a href="{{ url_for('eventos.lista') }}" class="btn btn-primary btn-action">
+                    <i class="bi bi-arrow-right"></i> Ir a Eventos
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-list-check text-success" style="font-size:40px"></i>
+                <h5 class="mt-3 mb-2">Planes de Acción</h5>
+                <p class="text-muted small">Seguimiento de planes de mitigación</p>
+                <a href="{{ url_for('planes.lista') }}" class="btn btn-primary btn-action">
+                    <i class="bi bi-arrow-right"></i> Ir a Planes
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-shield-exclamation text-primary" style="font-size:40px"></i>
+                <h5 class="mt-3 mb-2">Riesgos y Controles</h5>
+                <p class="text-muted small">Matriz de riesgos y controles asociados</p>
+                <a href="{{ url_for('riesgos.lista') }}" class="btn btn-primary btn-action">
+                    <i class="bi bi-arrow-right"></i> Ir a Riesgos
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

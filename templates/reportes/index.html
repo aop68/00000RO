@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes Regulatorios{% endblock %}
+{% block page_header %}Reportes Regulatorios SIB{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Reportes Regulatorios</h1>
+        <p class="page-subtitle">Superintendencia de Bancos de la República Dominicana - Riesgo Operacional</p>
+    </div>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle"></i>
+    Los reportes regulatorios se encuentran en fase de desarrollo. Los botones de generación estarán
+    habilitados próximamente conforme se implemente cada reporte según el Manual de Requerimientos
+    de Información de la SIB.
+</div>
+
+<div class="row g-4">
+    {% for reporte in reportes %}
+    <div class="col-lg-4 col-md-6">
+        <div class="reporte-card">
+            <div>
+                <div class="reporte-icon">
+                    <i class="bi {{ reporte.icono }}"></i>
+                </div>
+                <div class="reporte-codigo">{{ reporte.codigo }}</div>
+                <div class="reporte-nombre">{{ reporte.nombre }}</div>
+                <div class="reporte-descripcion">{{ reporte.descripcion }}</div>
+                <div class="reporte-periodicidad">
+                    <i class="bi bi-clock"></i> Periodicidad: {{ reporte.periodicidad }}
+                </div>
+            </div>
+            <a href="{{ url_for('reportes.generar', codigo=reporte.codigo) }}"
+               class="btn btn-outline-primary btn-action w-100">
+                <i class="bi bi-file-earmark-arrow-down"></i> Generar {{ reporte.codigo }}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Información adicional -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-book"></i> Referencia Regulatoria
+    </div>
+    <div class="card-body">
+        <p class="small text-muted mb-2">
+            Los reportes se generan conforme al Manual de Requerimientos de Información
+            de la Superintendencia de Bancos de la República Dominicana, bajo los lineamientos de:
+        </p>
+        <ul class="small text-muted">
+            <li>Marco Basel II/III para Riesgo Operacional</li>
+            <li>Reglamento de Gestión Integral de Riesgos</li>
+            <li>Normas Prudenciales de la SIB</li>
+            <li>Estándares COSO e ISO 31000</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
