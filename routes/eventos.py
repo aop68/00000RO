@@ -30,30 +30,8 @@ def nuevo():
     if request.method == 'POST':
         try:
             from fabric_db import crear_evento
-            datos = {
-                'codigo_evento': request.form.get('codigo_evento'),
-                'descripcion_evento': request.form.get('descripcion_evento'),
-                'tipo_evento': request.form.get('tipo_evento'),
-                'categoria_evento': request.form.get('categoria_evento'),
-                'subcategoria_evento': request.form.get('subcategoria_evento'),
-                'fecha_descubrimiento': request.form.get('fecha_descubrimiento') or None,
-                'fecha_inicio_evento': request.form.get('fecha_inicio_evento') or None,
-                'fecha_finalizacion_evento': request.form.get('fecha_finalizacion_evento') or None,
-                'monto_perdida_bruta_dop': request.form.get('monto_perdida_bruta_dop') or None,
-                'monto_recuperado_dop': request.form.get('monto_recuperado_dop') or None,
-                'monto_perdida_neta_dop': request.form.get('monto_perdida_neta_dop') or None,
-                'monto_usd': request.form.get('monto_usd') or None,
-                'area_origen': request.form.get('area_origen'),
-                'linea_negocios': request.form.get('linea_negocios'),
-                'proceso_afectado': request.form.get('proceso_afectado'),
-                'codigo_riesgo_asociado': request.form.get('codigo_riesgo_asociado'),
-                'estado_investigacion': request.form.get('estado_investigacion'),
-                'aplica_plan_accion': 1 if request.form.get('aplica_plan_accion') else 0,
-                'canal_distribucion_afectado': request.form.get('canal_distribucion_afectado'),
-                'medio_pago': request.form.get('medio_pago'),
-                'marca_tarjeta': request.form.get('marca_tarjeta'),
-                'usuario_carga': current_user.username
-            }
+            datos = _extraer_datos_formulario(request.form)
+            datos['usuario_carga'] = current_user.username
             crear_evento(datos)
             flash('Evento creado exitosamente.', 'success')
             return redirect(url_for('eventos.lista'))
@@ -79,30 +57,8 @@ def editar(evento_id):
 
     if request.method == 'POST':
         try:
-            datos = {
-                'codigo_evento': request.form.get('codigo_evento'),
-                'descripcion_evento': request.form.get('descripcion_evento'),
-                'tipo_evento': request.form.get('tipo_evento'),
-                'categoria_evento': request.form.get('categoria_evento'),
-                'subcategoria_evento': request.form.get('subcategoria_evento'),
-                'fecha_descubrimiento': request.form.get('fecha_descubrimiento') or None,
-                'fecha_inicio_evento': request.form.get('fecha_inicio_evento') or None,
-                'fecha_finalizacion_evento': request.form.get('fecha_finalizacion_evento') or None,
-                'monto_perdida_bruta_dop': request.form.get('monto_perdida_bruta_dop') or None,
-                'monto_recuperado_dop': request.form.get('monto_recuperado_dop') or None,
-                'monto_perdida_neta_dop': request.form.get('monto_perdida_neta_dop') or None,
-                'monto_usd': request.form.get('monto_usd') or None,
-                'area_origen': request.form.get('area_origen'),
-                'linea_negocios': request.form.get('linea_negocios'),
-                'proceso_afectado': request.form.get('proceso_afectado'),
-                'codigo_riesgo_asociado': request.form.get('codigo_riesgo_asociado'),
-                'estado_investigacion': request.form.get('estado_investigacion'),
-                'aplica_plan_accion': 1 if request.form.get('aplica_plan_accion') else 0,
-                'canal_distribucion_afectado': request.form.get('canal_distribucion_afectado'),
-                'medio_pago': request.form.get('medio_pago'),
-                'marca_tarjeta': request.form.get('marca_tarjeta'),
-                'usuario_modificacion': current_user.username
-            }
+            datos = _extraer_datos_formulario(request.form)
+            datos['usuario_modificacion'] = current_user.username
             actualizar_evento(evento_id, datos)
             flash('Evento actualizado exitosamente.', 'success')
             return redirect(url_for('eventos.lista'))
@@ -118,17 +74,61 @@ def editar(evento_id):
     return render_template('eventos/formulario.html', evento=evento, catalogos=catalogos)
 
 
+def _extraer_datos_formulario(form):
+    """Extrae y normaliza los datos del formulario de eventos."""
+    return {
+        'codigo_evento': form.get('codigo_evento'),
+        'descripcion_evento': form.get('descripcion_evento'),
+        'tipo_evento': form.get('tipo_evento'),
+        'categoria_evento': form.get('categoria_evento'),
+        'subcategoria_evento': form.get('subcategoria_evento'),
+        'estado_investigacion': form.get('estado_investigacion'),
+        'nivel_riesgo_inherente': form.get('nivel_riesgo_inherente'),
+        'factor_determinante': form.get('factor_determinante'),
+        'causa_evento': form.get('causa_evento'),
+        'consecuencia': form.get('consecuencia'),
+        'tipo_perdida': form.get('tipo_perdida'),
+        'tipo_registro': form.get('tipo_registro'),
+        'fecha_descubrimiento': form.get('fecha_descubrimiento') or None,
+        'fecha_inicio_evento': form.get('fecha_inicio_evento') or None,
+        'fecha_finalizacion_evento': form.get('fecha_finalizacion_evento') or None,
+        'monto_dop': form.get('monto_perdida_bruta_dop') or 0,
+        'monto_recuperado_seguros': form.get('monto_recuperado_seguros') or 0,
+        'monto_recuperado_otros': form.get('monto_recuperado_otros') or 0,
+        'monto_moneda_origen': form.get('monto_moneda_origen') or None,
+        'area_origen': form.get('area_origen'),
+        'linea_negocios': form.get('linea_negocios'),
+        'proceso_afectado': form.get('proceso_afectado'),
+        'codigo_riesgo_asociado': form.get('codigo_riesgo_asociado'),
+        'aplica_plan_accion': 1 if form.get('aplica_plan_accion') else 0,
+        'canal_distribucion_afectado': form.get('canal_distribucion_afectado'),
+        'medio_pago': form.get('medio_pago'),
+        'marca_tarjeta': form.get('marca_tarjeta'),
+    }
+
+
 def _cargar_catalogos_eventos():
     """Carga los catálogos necesarios para el formulario de eventos."""
     catalogos = {}
     try:
         from fabric_db import get_catalogo
-        catalogos['tipos_evento'] = get_catalogo('cat_tipo_evento')
+        all_tipos = get_catalogo('cat_tipo_evento_ro02')
+        catalogos['tipos_evento_n1'] = [t for t in all_tipos if t.get('nivel') == 1]
+        catalogos['tipos_evento_n2'] = [t for t in all_tipos if t.get('nivel') == 2]
+        catalogos['tipos_evento_n3'] = [t for t in all_tipos if t.get('nivel') == 3]
         catalogos['estados'] = get_catalogo('cat_estado_evento')
         catalogos['lineas_negocio'] = get_catalogo('cat_linea_negocio')
+        catalogos['areas'] = get_catalogo('cat_areas_organizacion')
+        catalogos['procesos'] = get_catalogo('cat_procesos')
         catalogos['canales'] = get_catalogo('cat_canales')
         catalogos['medios_pago'] = get_catalogo('cat_medio_pago')
-        catalogos['areas'] = get_catalogo('cat_areas_organizacion')
+        catalogos['marcas_tarjetas'] = get_catalogo('cat_marcas_tarjetas')
+        catalogos['naturalezas_perdida'] = get_catalogo('cat_naturaleza_perdida')
+        catalogos['factores_causa'] = get_catalogo('cat_factor_causa')
+        catalogos['consecuencias'] = get_catalogo('cat_consecuencias')
+        catalogos['severidades'] = get_catalogo('cat_severidad')
+        catalogos['probabilidades'] = get_catalogo('cat_probabilidad')
+        catalogos['incidentes_fraude'] = get_catalogo('cat_incidentes_fraude')
     except Exception:
         pass
     return catalogos
