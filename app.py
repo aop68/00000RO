@@ -62,42 +62,50 @@ def _init_fabric_tables(app):
     """Crea las tablas de riesgo operacional y carga datos iniciales si no existen."""
     migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
 
+    def _strip_comments(sql_text):
+        """Elimina líneas de comentarios de un bloque SQL."""
+        lines = sql_text.split('\n')
+        cleaned = [line for line in lines if not line.strip().startswith('--')]
+        return '\n'.join(cleaned).strip()
+
+    def _execute_sql_file(filepath, label):
+        """Ejecuta un archivo SQL statement por statement."""
+        with open(filepath, 'r', encoding='utf-8') as f:
+            sql = f.read()
+        for raw_statement in sql.split(';'):
+            statement = _strip_comments(raw_statement)
+            if statement:
+                try:
+                    db.session.execute(text(statement))
+                except Exception as stmt_err:
+                    app.logger.warning(f'[{label}] Statement omitido: {stmt_err}')
+                    db.session.rollback()
+                    continue
+        db.session.commit()
+        app.logger.info(f'{label} ejecutado correctamente.')
+
     # Ejecutar schema (CREATE TABLE IF NOT EXISTS — seguro re-ejecutar)
     schema_file = os.path.join(migrations_dir, 'init_schema.sql')
     if os.path.exists(schema_file):
         try:
-            with open(schema_file, 'r', encoding='utf-8') as f:
-                sql = f.read()
-            # Ejecutar cada statement separado por ;
-            for statement in sql.split(';'):
-                statement = statement.strip()
-                if statement and not statement.startswith('--'):
-                    db.session.execute(text(statement))
-            db.session.commit()
-            app.logger.info('Esquema de tablas Fabric inicializado correctamente.')
+            _execute_sql_file(schema_file, 'Schema')
         except Exception as e:
             db.session.rollback()
-            app.logger.warning(f'Esquema ya existente o error: {e}')
+            app.logger.error(f'Error creando schema: {e}')
 
     # Cargar datos iniciales solo si los catálogos están vacíos
     try:
         result = db.session.execute(text("SELECT COUNT(*) FROM cat_tipo_evento_ro02"))
         count = result.fetchone()[0]
     except Exception:
+        db.session.rollback()
         count = 0
 
     if count == 0:
         seed_file = os.path.join(migrations_dir, 'seed_data.sql')
         if os.path.exists(seed_file):
             try:
-                with open(seed_file, 'r', encoding='utf-8') as f:
-                    sql = f.read()
-                for statement in sql.split(';'):
-                    statement = statement.strip()
-                    if statement and not statement.startswith('--'):
-                        db.session.execute(text(statement))
-                db.session.commit()
-                app.logger.info('Datos iniciales de catálogos cargados correctamente.')
+                _execute_sql_file(seed_file, 'Seed data')
             except Exception as e:
                 db.session.rollback()
                 app.logger.error(f'Error cargando datos iniciales: {e}')
