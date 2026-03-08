@@ -360,6 +360,9 @@ body {
 .dataTables_wrapper .dataTables_length select {
     border: 1px solid var(--color-border);
     border-radius: 6px;
+    padding: 6px 28px 6px 12px;
+    min-width: 80px;
+    font-size: 14px;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button.current {
