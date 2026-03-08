@@ -109,13 +109,25 @@ def _init_fabric_tables(app):
         if count == 0:
             seed_file = os.path.join(migrations_dir, 'seed_data.sql')
             if os.path.exists(seed_file):
-                try:
-                    with open(seed_file, 'r', encoding='utf-8') as f:
-                        seed_sql = f.read()
-                    cur.execute(seed_sql)
-                    app.logger.info('Datos iniciales (seed) cargados correctamente.')
-                except Exception as e:
-                    app.logger.error(f'Error cargando seed data: {e}')
+                with open(seed_file, 'r', encoding='utf-8') as f:
+                    seed_sql = f.read()
+                # Ejecutar statement por statement para mayor robustez
+                ok_count = 0
+                err_count = 0
+                for raw_stmt in seed_sql.split(';'):
+                    # Limpiar comentarios
+                    lines = [l for l in raw_stmt.split('\n')
+                             if not l.strip().startswith('--')]
+                    stmt = '\n'.join(lines).strip()
+                    if stmt:
+                        try:
+                            cur.execute(stmt)
+                            ok_count += 1
+                        except Exception as e:
+                            app.logger.warning(f'Seed stmt omitido: {e}')
+                            err_count += 1
+                app.logger.info(
+                    f'Seed data: {ok_count} OK, {err_count} errores.')
         else:
             app.logger.info(f'Catálogos ya contienen {count} registros, omitiendo seed.')
 

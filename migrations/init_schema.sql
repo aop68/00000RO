@@ -69,16 +69,16 @@ CREATE TABLE IF NOT EXISTS cat_probabilidad (
 CREATE TABLE IF NOT EXISTS cat_tipo_control (
     tipo_control_id INT             PRIMARY KEY,
     codigo          VARCHAR(10)     NOT NULL UNIQUE,
-    nombre          VARCHAR(50)     NOT NULL,
+    nombre          VARCHAR(100)    NOT NULL,
     descripcion     TEXT,
-    momento_aplicacion VARCHAR(50)
+    momento_aplicacion VARCHAR(100)
 );
 
 CREATE TABLE IF NOT EXISTS cat_frecuencia_control (
     frecuencia_id   INT             PRIMARY KEY,
-    nombre          VARCHAR(50)     NOT NULL UNIQUE,
+    nombre          VARCHAR(100)    NOT NULL UNIQUE,
     periodicidad_dias INT,
-    descripcion     VARCHAR(100)
+    descripcion     VARCHAR(200)
 );
 
 CREATE TABLE IF NOT EXISTS matriz_riesgo (
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS umbrales_materializacion (
 
 CREATE TABLE IF NOT EXISTS cat_estado_evento (
     estado_id       INT             PRIMARY KEY,
-    nombre          VARCHAR(50)     NOT NULL UNIQUE,
+    nombre          VARCHAR(100)    NOT NULL UNIQUE,
     descripcion     TEXT,
     orden           INT,
     color_hex       VARCHAR(7),
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS cat_estado_evento (
 
 CREATE TABLE IF NOT EXISTS cat_estado_plan_accion (
     estado_id       INT             PRIMARY KEY,
-    nombre          VARCHAR(50)     NOT NULL UNIQUE,
+    nombre          VARCHAR(100)    NOT NULL UNIQUE,
     descripcion     TEXT,
     orden           INT,
     color_hex       VARCHAR(7)
@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS cat_medio_pago (
 CREATE TABLE IF NOT EXISTS cat_marcas_tarjetas (
     marca_id        INT             PRIMARY KEY,
     codigo          VARCHAR(10)     NOT NULL UNIQUE,
-    nombre          VARCHAR(50)     NOT NULL,
+    nombre          VARCHAR(100)    NOT NULL,
     activo          BOOLEAN         DEFAULT TRUE
 );
 
