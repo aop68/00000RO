@@ -55,6 +55,7 @@ def crear_evento(datos):
             area_origen, linea_negocios, proceso_afectado,
             codigo_riesgo_asociado, aplica_plan_accion,
             canal_distribucion_afectado, medio_pago, marca_tarjeta,
+            detalle_causa_raiz, descripcion_extendida,
             fecha_carga_sistema, usuario_carga
         ) VALUES (
             :codigo_evento, :descripcion_evento, :tipo_evento, :categoria_evento,
@@ -66,6 +67,7 @@ def crear_evento(datos):
             :area_origen, :linea_negocios, :proceso_afectado,
             :codigo_riesgo_asociado, :aplica_plan_accion,
             :canal_distribucion_afectado, :medio_pago, :marca_tarjeta,
+            :detalle_causa_raiz, :descripcion_extendida,
             CURRENT_TIMESTAMP, :usuario_carga
         )
     """)
@@ -97,6 +99,8 @@ def crear_evento(datos):
         'canal_distribucion_afectado': datos.get('canal_distribucion_afectado'),
         'medio_pago': datos.get('medio_pago'),
         'marca_tarjeta': datos.get('marca_tarjeta'),
+        'detalle_causa_raiz': datos.get('detalle_causa_raiz'),
+        'descripcion_extendida': datos.get('descripcion_extendida'),
         'usuario_carga': datos.get('usuario_carga'),
     }
     db.session.execute(query, params)
@@ -129,6 +133,8 @@ def actualizar_evento(evento_id, datos):
             aplica_plan_accion = :aplica_plan_accion,
             canal_distribucion_afectado = :canal_distribucion_afectado,
             medio_pago = :medio_pago, marca_tarjeta = :marca_tarjeta,
+            detalle_causa_raiz = :detalle_causa_raiz,
+            descripcion_extendida = :descripcion_extendida,
             fecha_modificacion_sistema = CURRENT_TIMESTAMP,
             usuario_carga = :usuario_carga
         WHERE evento_id = :evento_id
@@ -161,6 +167,8 @@ def actualizar_evento(evento_id, datos):
         'canal_distribucion_afectado': datos.get('canal_distribucion_afectado'),
         'medio_pago': datos.get('medio_pago'),
         'marca_tarjeta': datos.get('marca_tarjeta'),
+        'detalle_causa_raiz': datos.get('detalle_causa_raiz'),
+        'descripcion_extendida': datos.get('descripcion_extendida'),
         'usuario_carga': datos.get('usuario_modificacion'),
         'evento_id': evento_id,
     }

@@ -104,6 +104,8 @@ def _extraer_datos_formulario(form):
         'canal_distribucion_afectado': form.get('canal_distribucion_afectado'),
         'medio_pago': form.get('medio_pago'),
         'marca_tarjeta': form.get('marca_tarjeta'),
+        'detalle_causa_raiz': form.get('detalle_causa_raiz'),
+        'descripcion_extendida': form.get('descripcion_extendida'),
     }
 
 

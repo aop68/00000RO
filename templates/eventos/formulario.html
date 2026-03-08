@@ -83,13 +83,13 @@
             </div>
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">Factor de Causa (Nivel 1)</label>
+                    <label class="form-label">Factor</label>
                     <select class="form-select" name="factor_determinante" id="factor_n1">
                         <option value="">Seleccionar...</option>
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Causa del Evento (Nivel 2)</label>
+                    <label class="form-label">Causa del Evento</label>
                     <select class="form-select" name="causa_evento" id="factor_n2" disabled>
                         <option value="">Primero seleccione Factor...</option>
                     </select>
@@ -117,6 +117,14 @@
                         </option>
                         {% endfor %}
                     </select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Causa Raíz</label>
+                    <textarea class="form-control" name="detalle_causa_raiz" rows="3">{{ evento.detalle_causa_raiz if evento else '' }}</textarea>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Descripción Extendida del Evento</label>
+                    <textarea class="form-control" name="descripcion_extendida" rows="3">{{ evento.descripcion_extendida if evento else '' }}</textarea>
                 </div>
             </div>
         </div>
