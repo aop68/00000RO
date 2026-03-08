@@ -28,39 +28,21 @@
                            value="{{ evento.codigo_evento if evento else '' }}" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Tipo de Evento (Nivel 1)</label>
-                    <select class="form-select" name="tipo_evento">
+                    <label class="form-label">Tipo de Evento (Nivel 1) *</label>
+                    <select class="form-select" name="tipo_evento" id="tipo_evento" required>
                         <option value="">Seleccionar...</option>
-                        {% for tipo in catalogos.get('tipos_evento_n1', []) %}
-                        <option value="{{ tipo.nombre }}"
-                            {{ 'selected' if evento and evento.tipo_evento == tipo.nombre }}>
-                            {{ tipo.nombre }}
-                        </option>
-                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Categoría (Nivel 2)</label>
-                    <select class="form-select" name="categoria_evento">
-                        <option value="">Seleccionar...</option>
-                        {% for tipo in catalogos.get('tipos_evento_n2', []) %}
-                        <option value="{{ tipo.nombre }}"
-                            {{ 'selected' if evento and evento.categoria_evento == tipo.nombre }}>
-                            {{ tipo.nombre }}
-                        </option>
-                        {% endfor %}
+                    <select class="form-select" name="categoria_evento" id="categoria_evento" disabled>
+                        <option value="">Primero seleccione Tipo...</option>
                     </select>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Subcategoría (Nivel 3)</label>
-                    <select class="form-select" name="subcategoria_evento">
-                        <option value="">Seleccionar...</option>
-                        {% for tipo in catalogos.get('tipos_evento_n3', []) %}
-                        <option value="{{ tipo.nombre }}"
-                            {{ 'selected' if evento and evento.subcategoria_evento == tipo.nombre }}>
-                            {{ tipo.nombre }}
-                        </option>
-                        {% endfor %}
+                    <select class="form-select" name="subcategoria_evento" id="subcategoria_evento" disabled>
+                        <option value="">Primero seleccione Categoría...</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -101,15 +83,15 @@
             </div>
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">Factor Determinante</label>
-                    <select class="form-select" name="factor_determinante">
+                    <label class="form-label">Factor de Causa (Nivel 1)</label>
+                    <select class="form-select" name="factor_determinante" id="factor_n1">
                         <option value="">Seleccionar...</option>
-                        {% for factor in catalogos.get('factores_causa', []) %}
-                        <option value="{{ factor.nombre }}"
-                            {{ 'selected' if evento and evento.factor_determinante == factor.nombre }}>
-                            {{ factor.nombre }}
-                        </option>
-                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Causa del Evento (Nivel 2)</label>
+                    <select class="form-select" name="causa_evento" id="factor_n2" disabled>
+                        <option value="">Primero seleccione Factor...</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -135,10 +117,6 @@
                         </option>
                         {% endfor %}
                     </select>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Causa del Evento</label>
-                    <textarea class="form-control" name="causa_evento" rows="2">{{ evento.causa_evento if evento else '' }}</textarea>
                 </div>
             </div>
         </div>
@@ -319,4 +297,124 @@
         </div>
     </div>
 </form>
+
+<script>
+// ============================================================
+// DATOS DE CATÁLOGOS JERÁRQUICOS (inyectados desde el servidor)
+// ============================================================
+const TIPOS_EVENTO = {{ catalogos.get('tipos_evento', []) | tojson }};
+const FACTORES_CAUSA = {{ catalogos.get('factores_causa', []) | tojson }};
+
+// Valores actuales (para modo edición)
+const CURRENT = {
+    tipo_evento: {{ (evento.tipo_evento | tojson) if evento and evento.tipo_evento else 'null' }},
+    categoria_evento: {{ (evento.categoria_evento | tojson) if evento and evento.categoria_evento else 'null' }},
+    subcategoria_evento: {{ (evento.subcategoria_evento | tojson) if evento and evento.subcategoria_evento else 'null' }},
+    factor_determinante: {{ (evento.factor_determinante | tojson) if evento and evento.factor_determinante else 'null' }},
+    causa_evento: {{ (evento.causa_evento | tojson) if evento and evento.causa_evento else 'null' }}
+};
+
+// ============================================================
+// FUNCIÓN GENÉRICA PARA POBLAR UN SELECT
+// ============================================================
+function poblarSelect(selectEl, items, valorActual, placeholder) {
+    selectEl.innerHTML = '<option value="">' + placeholder + '</option>';
+    items.forEach(function(item) {
+        const opt = document.createElement('option');
+        opt.value = item.nombre;
+        opt.textContent = item.nombre;
+        if (valorActual && item.nombre === valorActual) {
+            opt.selected = true;
+        }
+        selectEl.appendChild(opt);
+    });
+    selectEl.disabled = (items.length === 0);
+}
+
+// ============================================================
+// CASCADA: TIPO EVENTO (N1) → CATEGORÍA (N2) → SUBCATEGORÍA (N3)
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    const selN1 = document.getElementById('tipo_evento');
+    const selN2 = document.getElementById('categoria_evento');
+    const selN3 = document.getElementById('subcategoria_evento');
+
+    const n1Items = TIPOS_EVENTO.filter(t => t.nivel === 1);
+    const n2Items = TIPOS_EVENTO.filter(t => t.nivel === 2);
+    const n3Items = TIPOS_EVENTO.filter(t => t.nivel === 3);
+
+    // Poblar Nivel 1
+    poblarSelect(selN1, n1Items, CURRENT.tipo_evento, 'Seleccionar tipo...');
+
+    // Al cambiar N1 → filtrar N2
+    selN1.addEventListener('change', function() {
+        const selected = n1Items.find(t => t.nombre === this.value);
+        const codigoPadre = selected ? selected.codigo : null;
+        const filtered = codigoPadre
+            ? n2Items.filter(t => t.codigo_padre === codigoPadre)
+            : [];
+        poblarSelect(selN2, filtered, null, filtered.length ? 'Seleccionar categoría...' : 'Sin categorías');
+        // Reset N3
+        poblarSelect(selN3, [], null, 'Primero seleccione Categoría...');
+    });
+
+    // Al cambiar N2 → filtrar N3
+    selN2.addEventListener('change', function() {
+        const selected = n2Items.find(t => t.nombre === this.value);
+        const codigoPadre = selected ? selected.codigo : null;
+        const filtered = codigoPadre
+            ? n3Items.filter(t => t.codigo_padre === codigoPadre)
+            : [];
+        poblarSelect(selN3, filtered, null, filtered.length ? 'Seleccionar subcategoría...' : 'Sin subcategorías');
+    });
+
+    // Si es modo edición, restaurar cascada
+    if (CURRENT.tipo_evento) {
+        selN1.dispatchEvent(new Event('change'));
+        setTimeout(function() {
+            if (CURRENT.categoria_evento) {
+                selN2.value = CURRENT.categoria_evento;
+                selN2.dispatchEvent(new Event('change'));
+                setTimeout(function() {
+                    if (CURRENT.subcategoria_evento) {
+                        selN3.value = CURRENT.subcategoria_evento;
+                    }
+                }, 50);
+            }
+        }, 50);
+    }
+
+    // ============================================================
+    // CASCADA: FACTOR CAUSA (N1) → CAUSA EVENTO (N2)
+    // ============================================================
+    const selF1 = document.getElementById('factor_n1');
+    const selF2 = document.getElementById('factor_n2');
+
+    const f1Items = FACTORES_CAUSA.filter(f => f.nivel === 1);
+    const f2Items = FACTORES_CAUSA.filter(f => f.nivel === 2);
+
+    // Poblar Factor N1
+    poblarSelect(selF1, f1Items, CURRENT.factor_determinante, 'Seleccionar factor...');
+
+    // Al cambiar F1 → filtrar F2
+    selF1.addEventListener('change', function() {
+        const selected = f1Items.find(f => f.nombre === this.value);
+        const codigoPadre = selected ? selected.codigo : null;
+        const filtered = codigoPadre
+            ? f2Items.filter(f => f.codigo_padre === codigoPadre)
+            : [];
+        poblarSelect(selF2, filtered, null, filtered.length ? 'Seleccionar causa...' : 'Sin causas');
+    });
+
+    // Si es modo edición, restaurar cascada factor
+    if (CURRENT.factor_determinante) {
+        selF1.dispatchEvent(new Event('change'));
+        setTimeout(function() {
+            if (CURRENT.causa_evento) {
+                selF2.value = CURRENT.causa_evento;
+            }
+        }, 50);
+    }
+});
+</script>
 {% endblock %}

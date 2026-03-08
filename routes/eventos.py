@@ -112,10 +112,10 @@ def _cargar_catalogos_eventos():
     catalogos = {}
     try:
         from fabric_db import get_catalogo
-        all_tipos = get_catalogo('cat_tipo_evento_ro02')
-        catalogos['tipos_evento_n1'] = [t for t in all_tipos if t.get('nivel') == 1]
-        catalogos['tipos_evento_n2'] = [t for t in all_tipos if t.get('nivel') == 2]
-        catalogos['tipos_evento_n3'] = [t for t in all_tipos if t.get('nivel') == 3]
+        # Catálogos jerárquicos (se pasan completos para cascada en JS)
+        catalogos['tipos_evento'] = get_catalogo('cat_tipo_evento_ro02')
+        catalogos['factores_causa'] = get_catalogo('cat_factor_causa')
+        # Catálogos simples
         catalogos['estados'] = get_catalogo('cat_estado_evento')
         catalogos['lineas_negocio'] = get_catalogo('cat_linea_negocio')
         catalogos['areas'] = get_catalogo('cat_areas_organizacion')
@@ -124,7 +124,6 @@ def _cargar_catalogos_eventos():
         catalogos['medios_pago'] = get_catalogo('cat_medio_pago')
         catalogos['marcas_tarjetas'] = get_catalogo('cat_marcas_tarjetas')
         catalogos['naturalezas_perdida'] = get_catalogo('cat_naturaleza_perdida')
-        catalogos['factores_causa'] = get_catalogo('cat_factor_causa')
         catalogos['consecuencias'] = get_catalogo('cat_consecuencias')
         catalogos['severidades'] = get_catalogo('cat_severidad')
         catalogos['probabilidades'] = get_catalogo('cat_probabilidad')
