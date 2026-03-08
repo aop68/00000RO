@@ -3,9 +3,10 @@ Aplicación principal - Gestión de Riesgo Operacional.
 """
 import os
 from flask import Flask
-from config import config, Config
+from config import config
 from extensions import db, login_manager
 from models import User
+from sqlalchemy import text
 
 
 def create_app(config_name=None):
@@ -15,7 +16,6 @@ def create_app(config_name=None):
 
     app = Flask(__name__)
     app.config.from_object(config[config_name])
-    app.config['FABRIC_CONN_STRING'] = Config.get_fabric_connection_string()
 
     # Inicializar extensiones
     db.init_app(app)
@@ -44,12 +44,63 @@ def create_app(config_name=None):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(reportes_bp, url_prefix='/reportes')
 
-    # Crear tablas locales y usuario admin por defecto
+    # Liberar sesión de SQLAlchemy después de cada request
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
+
+    # Crear tablas y datos iniciales
     with app.app_context():
         db.create_all()
+        _init_fabric_tables(app)
         _crear_admin_default()
 
     return app
+
+
+def _init_fabric_tables(app):
+    """Crea las tablas de riesgo operacional y carga datos iniciales si no existen."""
+    migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
+
+    # Ejecutar schema (CREATE TABLE IF NOT EXISTS — seguro re-ejecutar)
+    schema_file = os.path.join(migrations_dir, 'init_schema.sql')
+    if os.path.exists(schema_file):
+        try:
+            with open(schema_file, 'r', encoding='utf-8') as f:
+                sql = f.read()
+            # Ejecutar cada statement separado por ;
+            for statement in sql.split(';'):
+                statement = statement.strip()
+                if statement and not statement.startswith('--'):
+                    db.session.execute(text(statement))
+            db.session.commit()
+            app.logger.info('Esquema de tablas Fabric inicializado correctamente.')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.warning(f'Esquema ya existente o error: {e}')
+
+    # Cargar datos iniciales solo si los catálogos están vacíos
+    try:
+        result = db.session.execute(text("SELECT COUNT(*) FROM cat_tipo_evento_ro02"))
+        count = result.fetchone()[0]
+    except Exception:
+        count = 0
+
+    if count == 0:
+        seed_file = os.path.join(migrations_dir, 'seed_data.sql')
+        if os.path.exists(seed_file):
+            try:
+                with open(seed_file, 'r', encoding='utf-8') as f:
+                    sql = f.read()
+                for statement in sql.split(';'):
+                    statement = statement.strip()
+                    if statement and not statement.startswith('--'):
+                        db.session.execute(text(statement))
+                db.session.commit()
+                app.logger.info('Datos iniciales de catálogos cargados correctamente.')
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f'Error cargando datos iniciales: {e}')
 
 
 def _crear_admin_default():
@@ -71,4 +122,5 @@ def _crear_admin_default():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
