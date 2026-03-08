@@ -59,56 +59,69 @@ def create_app(config_name=None):
 
 
 def _init_fabric_tables(app):
-    """Crea las tablas de riesgo operacional y carga datos iniciales si no existen."""
+    """Crea las tablas de riesgo operacional y carga datos iniciales
+    usando psycopg2 directamente para ejecutar scripts SQL completos."""
+    import psycopg2
+
+    db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if 'sqlite' in db_url:
+        app.logger.info('Base de datos SQLite detectada, omitiendo tablas Fabric.')
+        return
+
     migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
 
-    def _strip_comments(sql_text):
-        """Elimina líneas de comentarios de un bloque SQL."""
-        lines = sql_text.split('\n')
-        cleaned = [line for line in lines if not line.strip().startswith('--')]
-        return '\n'.join(cleaned).strip()
-
-    def _execute_sql_file(filepath, label):
-        """Ejecuta un archivo SQL statement por statement."""
-        with open(filepath, 'r', encoding='utf-8') as f:
-            sql = f.read()
-        for raw_statement in sql.split(';'):
-            statement = _strip_comments(raw_statement)
-            if statement:
-                try:
-                    db.session.execute(text(statement))
-                except Exception as stmt_err:
-                    app.logger.warning(f'[{label}] Statement omitido: {stmt_err}')
-                    db.session.rollback()
-                    continue
-        db.session.commit()
-        app.logger.info(f'{label} ejecutado correctamente.')
-
-    # Ejecutar schema (CREATE TABLE IF NOT EXISTS — seguro re-ejecutar)
-    schema_file = os.path.join(migrations_dir, 'init_schema.sql')
-    if os.path.exists(schema_file):
-        try:
-            _execute_sql_file(schema_file, 'Schema')
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f'Error creando schema: {e}')
-
-    # Cargar datos iniciales solo si los catálogos están vacíos
+    # Parsear la URL de conexión para psycopg2
+    # Formato: postgresql://user:pass@host:port/dbname
     try:
-        result = db.session.execute(text("SELECT COUNT(*) FROM cat_tipo_evento_ro02"))
-        count = result.fetchone()[0]
-    except Exception:
-        db.session.rollback()
-        count = 0
+        conn = psycopg2.connect(db_url)
+        conn.autocommit = True
+        cur = conn.cursor()
+    except Exception as e:
+        app.logger.error(f'No se pudo conectar con psycopg2: {e}')
+        return
 
-    if count == 0:
-        seed_file = os.path.join(migrations_dir, 'seed_data.sql')
-        if os.path.exists(seed_file):
+    try:
+        # 1. Ejecutar schema completo
+        schema_file = os.path.join(migrations_dir, 'init_schema.sql')
+        if os.path.exists(schema_file):
             try:
-                _execute_sql_file(seed_file, 'Seed data')
+                with open(schema_file, 'r', encoding='utf-8') as f:
+                    schema_sql = f.read()
+                cur.execute(schema_sql)
+                app.logger.info('Schema de tablas Fabric creado correctamente.')
             except Exception as e:
-                db.session.rollback()
-                app.logger.error(f'Error cargando datos iniciales: {e}')
+                app.logger.error(f'Error creando schema Fabric: {e}')
+                # Intentar cerrar y reconectar
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                return
+
+        # 2. Verificar si ya hay datos en los catálogos
+        try:
+            cur.execute("SELECT COUNT(*) FROM cat_tipo_evento_ro02")
+            count = cur.fetchone()[0]
+        except Exception:
+            count = 0
+
+        # 3. Cargar seed data si los catálogos están vacíos
+        if count == 0:
+            seed_file = os.path.join(migrations_dir, 'seed_data.sql')
+            if os.path.exists(seed_file):
+                try:
+                    with open(seed_file, 'r', encoding='utf-8') as f:
+                        seed_sql = f.read()
+                    cur.execute(seed_sql)
+                    app.logger.info('Datos iniciales (seed) cargados correctamente.')
+                except Exception as e:
+                    app.logger.error(f'Error cargando seed data: {e}')
+        else:
+            app.logger.info(f'Catálogos ya contienen {count} registros, omitiendo seed.')
+
+    finally:
+        cur.close()
+        conn.close()
 
 
 def _crear_admin_default():
