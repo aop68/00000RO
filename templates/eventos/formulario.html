@@ -24,7 +24,7 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Código del Evento *</label>
-                    <input type="text" class="form-control" name="codigo_evento"
+                    <input type="text" class="form-control" name="codigo_evento" id="codigo_evento"
                            value="{{ evento.codigo_evento if evento else '' }}" required>
                 </div>
                 <div class="col-md-4">
@@ -72,6 +72,10 @@
                 <div class="col-12">
                     <label class="form-label">Descripción del Evento *</label>
                     <textarea class="form-control" name="descripcion_evento" rows="3" required>{{ evento.descripcion_evento if evento else '' }}</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Descripción Extendida del Evento</label>
+                    <textarea class="form-control" name="descripcion_extendida" rows="3">{{ evento.descripcion_extendida if evento else '' }}</textarea>
                 </div>
             </div>
         </div>
@@ -122,10 +126,6 @@
                     <label class="form-label">Causa Raíz</label>
                     <textarea class="form-control" name="detalle_causa_raiz" rows="3">{{ evento.detalle_causa_raiz if evento else '' }}</textarea>
                 </div>
-                <div class="col-md-12">
-                    <label class="form-label">Descripción Extendida del Evento</label>
-                    <textarea class="form-control" name="descripcion_extendida" rows="3">{{ evento.descripcion_extendida if evento else '' }}</textarea>
-                </div>
             </div>
         </div>
 
@@ -137,7 +137,7 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Fecha de Descubrimiento</label>
-                    <input type="date" class="form-control" name="fecha_descubrimiento"
+                    <input type="date" class="form-control" name="fecha_descubrimiento" id="fecha_descubrimiento"
                            value="{{ evento.fecha_descubrimiento if evento else '' }}">
                 </div>
                 <div class="col-md-4">
@@ -413,6 +413,33 @@ document.addEventListener('DOMContentLoaded', function() {
             : [];
         poblarSelect(selF2, filtered, null, filtered.length ? 'Seleccionar causa...' : 'Sin causas');
     });
+
+    // ============================================================
+    // AUTO-GENERAR CÓDIGO DE EVENTO al cambiar fecha descubrimiento
+    // ============================================================
+    const inputFecha = document.getElementById('fecha_descubrimiento');
+    const inputCodigo = document.getElementById('codigo_evento');
+    const esEdicion = {{ 'true' if evento else 'false' }};
+
+    if (inputFecha && inputCodigo && !esEdicion) {
+        inputFecha.addEventListener('change', function() {
+            if (!this.value) return;
+            const parts = this.value.split('-');
+            const anio = parts[0];
+            const mes = parts[1];
+            fetch('/eventos/siguiente_codigo?anio=' + anio + '&mes=' + mes)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.codigo && !inputCodigo._modificadoManual) {
+                        inputCodigo.value = data.codigo;
+                    }
+                });
+        });
+        // Marcar si el usuario modifica manualmente el código
+        inputCodigo.addEventListener('input', function() {
+            inputCodigo._modificadoManual = true;
+        });
+    }
 
     // Si es modo edición, restaurar cascada factor
     if (CURRENT.factor_determinante) {
