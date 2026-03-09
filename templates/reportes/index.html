@@ -33,10 +33,17 @@
                     <i class="bi bi-clock"></i> Periodicidad: {{ reporte.periodicidad }}
                 </div>
             </div>
+            {% if reporte.codigo == 'RO-02' %}
+            <button type="button" class="btn btn-outline-primary btn-action w-100"
+                    data-bs-toggle="modal" data-bs-target="#modalRO02">
+                <i class="bi bi-file-earmark-arrow-down"></i> Generar {{ reporte.codigo }}
+            </button>
+            {% else %}
             <a href="{{ url_for('reportes.generar', codigo=reporte.codigo) }}"
                class="btn btn-outline-primary btn-action w-100">
                 <i class="bi bi-file-earmark-arrow-down"></i> Generar {{ reporte.codigo }}
             </a>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
@@ -60,4 +67,64 @@
         </ul>
     </div>
 </div>
+
+<!-- Modal Reporte RO-02 -->
+<div class="modal fade" id="modalRO02" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-file-earmark-text"></i> Generar Reporte RO-02</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Seleccione el período para generar el reporte RO-02 en formato TXT separado por pipes.</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Año *</label>
+                        <select class="form-select" id="ro02_anio">
+                            {% for y in range(2020, 2031) %}
+                            <option value="{{ y }}" {{ 'selected' if y == 2026 }}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Mes *</label>
+                        <select class="form-select" id="ro02_mes">
+                            <option value="1">Enero</option>
+                            <option value="2">Febrero</option>
+                            <option value="3" selected>Marzo</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Mayo</option>
+                            <option value="6">Junio</option>
+                            <option value="7">Julio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnGenerarRO02">
+                    <i class="bi bi-download"></i> Generar y Descargar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('btnGenerarRO02').addEventListener('click', function() {
+    var anio = document.getElementById('ro02_anio').value;
+    var mes = document.getElementById('ro02_mes').value;
+    window.location.href = '/eventos/reporte_ro02?anio=' + anio + '&mes=' + mes;
+    var modal = bootstrap.Modal.getInstance(document.getElementById('modalRO02'));
+    if (modal) modal.hide();
+});
+</script>
 {% endblock %}

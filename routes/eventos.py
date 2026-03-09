@@ -131,23 +131,8 @@ def reporte_ro02():
         # Cargar catálogos para mapear nombre → código
         catalogos_map = _cargar_mapas_catalogos()
 
-        # Generar líneas del reporte
+        # Generar líneas del reporte (sin encabezado)
         lineas = []
-        # Encabezado
-        encabezado = '|'.join([
-            'NUM_SECUENCIAL', 'CODIGO_EVENTO', 'TIPO_EVENTO', 'DESCRIPCION_EVENTO',
-            'CANTIDAD_EVENTOS', 'TIPO_PERDIDA', 'CONSECUENCIA', 'LINEA_NEGOCIOS',
-            'PROCESO_AFECTADO', 'PRODUCTO_AFECTADO', 'SERVICIO_AFECTADO',
-            'AREA_DEPARTAMENTO', 'MARCA_TARJETA', 'CANAL_DISTRIBUCION',
-            'FACTOR_CAUSA', 'LOCALIDAD', 'FECHA_DESCUBRIMIENTO',
-            'FECHA_INICIO', 'FECHA_FINALIZACION', 'FECHA_CIERRE',
-            'TIPO_MONEDA', 'MONTO_PERDIDA_MN', 'MONTO_PERDIDA_MO',
-            'CUENTA_CONTABLE', 'FECHA_CONTABILIZACION',
-            'MONTO_RECUPERADO_SEGUROS', 'MONTO_RECUPERADO_OTROS',
-            'FECHA_CONTAB_RECUPERACION', 'MEDIO_PAGO',
-            'DETALLE_INCIDENTE_FRAUDE', 'TIPO_REGISTRO', 'ESTATUS'
-        ])
-        lineas.append(encabezado)
 
         for idx, ev in enumerate(eventos, 1):
             # Mapear tipo_perdida a código
@@ -286,10 +271,10 @@ def _fmt_fecha(valor):
 
 
 def _fmt_monto(valor):
-    """Formatea un monto para el reporte."""
+    """Formatea un monto para el reporte (solo enteros)."""
     if valor is None:
-        return '0.00'
-    return f'{float(valor):.2f}'
+        return '0'
+    return str(int(float(valor)))
 
 
 def _extraer_datos_formulario(form):
