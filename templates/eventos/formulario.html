@@ -15,6 +15,7 @@
 </div>
 
 <form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="card-body">
         <!-- Identificación del Evento -->
         <div class="form-section">
@@ -150,6 +151,11 @@
                     <input type="date" class="form-control" name="fecha_finalizacion_evento"
                            value="{{ evento.fecha_finalizacion_evento if evento else '' }}">
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">Fecha de Cierre del Evento</label>
+                    <input type="date" class="form-control" name="fecha_cierre_evento"
+                           value="{{ evento.fecha_cierre_evento if evento else '' }}">
+                </div>
             </div>
         </div>
 
@@ -160,24 +166,67 @@
             </div>
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label">Pérdida Bruta (DOP)</label>
+                    <label class="form-label">Cantidad de Eventos</label>
+                    <input type="number" class="form-control" name="cantidad_eventos"
+                           value="{{ evento.cantidad_eventos if evento else '1' }}" min="1">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tipo Moneda Ocurrencia</label>
+                    <select class="form-select" name="tipo_moneda_ocurrencia">
+                        {% for mon in catalogos.get('monedas', []) %}
+                        <option value="{{ mon.codigo }}"
+                            {{ 'selected' if (evento and evento.tipo_moneda_ocurrencia == mon.codigo) or (not evento and mon.codigo == 'DOP') }}>
+                            {{ mon.codigo }} - {{ mon.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Pérdida Bruta (MN)</label>
                     <input type="number" step="0.01" class="form-control" name="monto_perdida_bruta_dop"
                            value="{{ evento.monto_dop if evento else '' }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Recuperado Seguros (DOP)</label>
-                    <input type="number" step="0.01" class="form-control" name="monto_recuperado_seguros"
-                           value="{{ evento.monto_recuperado_seguros if evento else '' }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Recuperado Otros (DOP)</label>
-                    <input type="number" step="0.01" class="form-control" name="monto_recuperado_otros"
-                           value="{{ evento.monto_recuperado_otros if evento else '' }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Monto Moneda Origen</label>
                     <input type="number" step="0.01" class="form-control" name="monto_moneda_origen"
                            value="{{ evento.monto_moneda_origen if evento else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cuenta Contable</label>
+                    <input type="text" class="form-control" name="cuenta_contable_monto"
+                           value="{{ evento.cuenta_contable_monto if evento else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Contabilización</label>
+                    <input type="date" class="form-control" name="fecha_contabilizacion"
+                           value="{{ evento.fecha_contabilizacion if evento else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Recuperado Seguros (MN)</label>
+                    <input type="number" step="0.01" class="form-control" name="monto_recuperado_seguros"
+                           value="{{ evento.monto_recuperado_seguros if evento else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Recuperado Otros (MN)</label>
+                    <input type="number" step="0.01" class="form-control" name="monto_recuperado_otros"
+                           value="{{ evento.monto_recuperado_otros if evento else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Contab. Recuperación</label>
+                    <input type="date" class="form-control" name="fecha_contab_recuperacion"
+                           value="{{ evento.fecha_contab_recuperacion if evento else '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Estatus Contabilización</label>
+                    <select class="form-select" name="estatus_contabilizacion">
+                        <option value="">Seleccionar...</option>
+                        {% for est in catalogos.get('estatus_contabilizacion', []) %}
+                        <option value="{{ est.nombre }}"
+                            {{ 'selected' if evento and evento.estatus_contabilizacion == est.nombre }}>
+                            {{ est.codigo }} - {{ est.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
         </div>
@@ -220,6 +269,42 @@
                         <option value="{{ proc.nombre }}"
                             {{ 'selected' if evento and evento.proceso_afectado == proc.nombre }}>
                             {{ proc.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Producto Afectado</label>
+                    <select class="form-select" name="producto_afectado">
+                        <option value="">Seleccionar...</option>
+                        {% for prod in catalogos.get('productos', []) %}
+                        <option value="{{ prod.nombre }}"
+                            {{ 'selected' if evento and evento.producto_afectado == prod.nombre }}>
+                            {{ prod.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Servicio Afectado</label>
+                    <select class="form-select" name="servicio_afectado">
+                        <option value="">Seleccionar...</option>
+                        {% for serv in catalogos.get('servicios', []) %}
+                        <option value="{{ serv.nombre }}"
+                            {{ 'selected' if evento and evento.servicio_afectado == serv.nombre }}>
+                            {{ serv.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Localidad</label>
+                    <select class="form-select" name="localidad_origen">
+                        <option value="">Seleccionar...</option>
+                        {% for loc in catalogos.get('localidades', []) %}
+                        <option value="{{ loc.nombre }}"
+                            {{ 'selected' if evento and evento.localidad_origen == loc.nombre }}>
+                            {{ loc.nombre }}
                         </option>
                         {% endfor %}
                     </select>
@@ -275,15 +360,26 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Incidente de Fraude</label>
-                    <select class="form-select" name="tipo_registro">
+                    <label class="form-label">Detalle Incidente Fraudulento (T148)</label>
+                    <select class="form-select" name="incidente_fraude">
                         <option value="">Seleccionar...</option>
                         {% for inc in catalogos.get('incidentes_fraude', []) %}
                         <option value="{{ inc.nombre }}"
-                            {{ 'selected' if evento and evento.tipo_registro == inc.nombre }}>
+                            {{ 'selected' if evento and evento.incidente_fraude == inc.nombre }}>
                             {{ inc.nombre }}
                         </option>
                         {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tipo de Registro</label>
+                    <select class="form-select" name="tipo_registro">
+                        <option value="">Seleccionar...</option>
+                        <option value="Nuevo" {{ 'selected' if evento and evento.tipo_registro == 'Nuevo' }}>N - Nuevo</option>
+                        <option value="Actualización" {{ 'selected' if evento and evento.tipo_registro == 'Actualización' }}>A - Actualización</option>
+                        <option value="Modificación" {{ 'selected' if evento and evento.tipo_registro == 'Modificación' }}>M - Modificación provisiones</option>
+                        <option value="Reclasificación" {{ 'selected' if evento and evento.tipo_registro == 'Reclasificación' }}>R - Reclasificación</option>
+                        <option value="Corrección" {{ 'selected' if evento and evento.tipo_registro == 'Corrección' }}>C - Corrección</option>
                     </select>
                 </div>
                 <div class="col-md-4">

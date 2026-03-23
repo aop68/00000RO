@@ -1,10 +1,11 @@
 """
 Rutas CRUD para Eventos de Riesgo Operacional.
 """
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
-from sqlalchemy import text
-from extensions import db
+
+logger = logging.getLogger(__name__)
 
 eventos_bp = Blueprint('eventos', __name__)
 
@@ -18,7 +19,8 @@ def lista():
         from fabric_db import get_eventos
         eventos = get_eventos()
     except Exception as e:
-        error = f"Error al conectar con la base de datos: {str(e)}"
+        logger.error("Error al obtener eventos: %s", e)
+        error = "Error al conectar con la base de datos. Intente de nuevo más tarde."
     return render_template('eventos/lista.html', eventos=eventos, error=error)
 
 
@@ -38,7 +40,8 @@ def nuevo():
             flash('Evento creado exitosamente.', 'success')
             return redirect(url_for('eventos.lista'))
         except Exception as e:
-            flash(f'Error al crear evento: {str(e)}', 'danger')
+            logger.error("Error al crear evento: %s", e)
+            flash('Error al crear evento. Verifique los datos e intente de nuevo.', 'danger')
 
     catalogos = _cargar_catalogos_eventos()
     return render_template('eventos/formulario.html', evento=None, catalogos=catalogos)
@@ -54,7 +57,8 @@ def editar(evento_id):
     try:
         from fabric_db import get_evento, actualizar_evento
     except Exception as e:
-        flash(f'Error de conexión: {str(e)}', 'danger')
+        logger.error("Error de conexión al editar evento: %s", e)
+        flash('Error de conexión con la base de datos.', 'danger')
         return redirect(url_for('eventos.lista'))
 
     if request.method == 'POST':
@@ -65,7 +69,8 @@ def editar(evento_id):
             flash('Evento actualizado exitosamente.', 'success')
             return redirect(url_for('eventos.lista'))
         except Exception as e:
-            flash(f'Error al actualizar: {str(e)}', 'danger')
+            logger.error("Error al actualizar evento %s: %s", evento_id, e)
+            flash('Error al actualizar evento. Verifique los datos e intente de nuevo.', 'danger')
 
     evento = get_evento(evento_id)
     if not evento:
@@ -88,17 +93,8 @@ def siguiente_codigo():
     mm = mes.zfill(2)
     prefijo = f'E-{yy}{mm}-'
     try:
-        result = db.session.execute(
-            text("SELECT codigo_evento FROM eventos_riesgo_operacional WHERE codigo_evento LIKE :prefijo ORDER BY codigo_evento DESC LIMIT 1"),
-            {'prefijo': prefijo + '%'}
-        )
-        row = result.fetchone()
-        if row:
-            ultimo = row[0]
-            seq = int(ultimo.split('-')[-1]) + 1
-        else:
-            seq = 1
-        codigo = f'{prefijo}{seq:03d}'
+        from fabric_db import get_siguiente_codigo
+        codigo = get_siguiente_codigo(prefijo)
     except Exception:
         codigo = f'{prefijo}001'
     return jsonify({'codigo': codigo})
@@ -116,17 +112,8 @@ def reporte_ro02():
 
     try:
         # Obtener eventos del periodo
-        result = db.session.execute(
-            text("""
-                SELECT * FROM eventos_riesgo_operacional
-                WHERE EXTRACT(YEAR FROM fecha_descubrimiento) = :anio
-                  AND EXTRACT(MONTH FROM fecha_descubrimiento) = :mes
-                ORDER BY codigo_evento
-            """),
-            {'anio': int(anio), 'mes': int(mes)}
-        )
-        columns = result.keys()
-        eventos = [dict(zip(columns, row)) for row in result.fetchall()]
+        from fabric_db import get_eventos_por_periodo
+        eventos = get_eventos_por_periodo(anio, mes)
 
         # Cargar catálogos para mapear nombre → código
         catalogos_map = _cargar_mapas_catalogos()
@@ -147,38 +134,38 @@ def reporte_ro02():
             tipo_reg_cod = _mapear_tipo_registro(tipo_reg)
 
             campos = [
-                str(idx),
-                ev.get('codigo_evento') or '',
-                catalogos_map.get('tipo_evento', {}).get(ev.get('tipo_evento'), ''),
-                (ev.get('descripcion_evento') or '').replace('|', ' ').replace('\n', ' '),
-                str(ev.get('cantidad_eventos') or 1),
-                tipo_perdida_cod,
-                catalogos_map.get('consecuencia', {}).get(ev.get('consecuencia'), ''),
-                catalogos_map.get('linea_negocio', {}).get(ev.get('linea_negocios'), ''),
-                catalogos_map.get('proceso', {}).get(ev.get('proceso_afectado'), ''),
-                catalogos_map.get('proceso', {}).get(ev.get('producto_afectado'), ''),
-                catalogos_map.get('proceso', {}).get(ev.get('servicio_afectado'), ''),
-                catalogos_map.get('area', {}).get(ev.get('area_origen'), ''),
-                catalogos_map.get('marca_tarjeta', {}).get(ev.get('marca_tarjeta'), ''),
-                catalogos_map.get('canal', {}).get(ev.get('canal_distribucion_afectado'), ''),
-                catalogos_map.get('factor_causa', {}).get(ev.get('factor_determinante'), ''),
-                catalogos_map.get('area', {}).get(ev.get('localidad_origen'), ''),
-                _fmt_fecha(ev.get('fecha_descubrimiento')),
-                _fmt_fecha(ev.get('fecha_inicio_evento')),
-                _fmt_fecha(ev.get('fecha_finalizacion_evento')),
-                _fmt_fecha(ev.get('fecha_cierre_evento')),
-                ev.get('tipo_moneda_ocurrencia') or 'DOP',
-                _fmt_monto(ev.get('monto_dop')),
-                _fmt_monto(ev.get('monto_moneda_origen')),
-                ev.get('cuenta_contable_monto') or '',
-                _fmt_fecha(ev.get('fecha_contabilizacion')),
-                _fmt_monto(ev.get('monto_recuperado_seguros')),
-                _fmt_monto(ev.get('monto_recuperado_otros')),
-                _fmt_fecha(ev.get('fecha_contab_recuperacion')),
-                catalogos_map.get('medio_pago', {}).get(ev.get('medio_pago'), ''),
-                catalogos_map.get('incidente_fraude', {}).get(ev.get('tipo_registro'), ''),
-                tipo_reg_cod,
-                estatus_cod,
+                str(idx),                                                          # 1. Número secuencial
+                ev.get('codigo_evento') or '',                                     # 2. Código del evento
+                catalogos_map.get('tipo_evento', {}).get(ev.get('tipo_evento'), ''),# 3. Tipo de eventos de riesgo (T097)
+                (ev.get('descripcion_evento') or '').replace('|', ' ').replace('\n', ' '),  # 4. Descripción
+                str(ev.get('cantidad_eventos') or 1),                              # 5. Cantidad de eventos
+                tipo_perdida_cod,                                                  # 6. Tipo de pérdida
+                catalogos_map.get('consecuencia', {}).get(ev.get('consecuencia'), ''),      # 7. Consecuencia (T127)
+                catalogos_map.get('linea_negocio', {}).get(ev.get('linea_negocios'), ''),   # 8. Línea de negocios (T072)
+                catalogos_map.get('proceso', {}).get(ev.get('proceso_afectado'), ''),       # 9. Proceso afectado (T126)
+                catalogos_map.get('producto', {}).get(ev.get('producto_afectado'), ''),     # 10. Producto afectado (T078)
+                catalogos_map.get('servicio', {}).get(ev.get('servicio_afectado'), ''),     # 11. Servicio afectado (T078)
+                catalogos_map.get('area', {}).get(ev.get('area_origen'), ''),               # 12. Área o departamento (T075)
+                catalogos_map.get('marca_tarjeta', {}).get(ev.get('marca_tarjeta'), ''),    # 13. Marca de tarjeta (T081)
+                catalogos_map.get('canal', {}).get(ev.get('canal_distribucion_afectado'), ''),  # 14. Canal distribución (T069)
+                catalogos_map.get('factor_causa', {}).get(ev.get('factor_determinante'), ''),   # 15. Factor determinante (T125)
+                catalogos_map.get('localidad', {}).get(ev.get('localidad_origen'), ''),     # 16. Localidad (T016)
+                _fmt_fecha(ev.get('fecha_descubrimiento')),                        # 17. Fecha descubrimiento
+                _fmt_fecha(ev.get('fecha_inicio_evento')),                         # 18. Fecha inicio
+                _fmt_fecha(ev.get('fecha_finalizacion_evento')),                   # 19. Fecha finalización
+                _fmt_fecha(ev.get('fecha_cierre_evento')),                         # 20. Fecha cierre
+                ev.get('tipo_moneda_ocurrencia') or 'DOP',                         # 21. Tipo moneda (T050)
+                _fmt_monto(ev.get('monto_dop')),                                   # 22. Monto pérdida MN
+                _fmt_monto(ev.get('monto_moneda_origen')),                         # 23. Monto pérdida MO
+                ev.get('cuenta_contable_monto') or '',                             # 24. Cuenta contable
+                _fmt_fecha(ev.get('fecha_contabilizacion')),                       # 25. Fecha contabilización
+                _fmt_monto(ev.get('monto_recuperado_seguros')),                    # 26. Recuperado seguros
+                _fmt_monto(ev.get('monto_recuperado_otros')),                      # 27. Recuperado otros
+                _fmt_fecha(ev.get('fecha_contab_recuperacion')),                   # 28. Fecha contab. recuperación
+                catalogos_map.get('medio_pago', {}).get(ev.get('medio_pago'), ''),          # 29. Medio de pago (T061)
+                catalogos_map.get('incidente_fraude', {}).get(ev.get('incidente_fraude'), ''),  # 30. Incidente fraudulento (T148)
+                tipo_reg_cod,                                                      # 31. Tipo de registro
+                estatus_cod,                                                       # 32. Estatus
             ]
             lineas.append('|'.join(campos))
 
@@ -191,7 +178,8 @@ def reporte_ro02():
             headers={'Content-Disposition': f'attachment; filename={nombre_archivo}'}
         )
     except Exception as e:
-        flash(f'Error al generar reporte: {str(e)}', 'danger')
+        logger.error("Error al generar reporte RO02: %s", e)
+        flash('Error al generar el reporte. Intente de nuevo más tarde.', 'danger')
         return redirect(url_for('eventos.lista'))
 
 
@@ -209,13 +197,14 @@ def _cargar_mapas_catalogos():
         'factor_causa': 'cat_factor_causa',
         'medio_pago': 'cat_medio_pago',
         'incidente_fraude': 'cat_incidentes_fraude',
+        'localidad': 'cat_localidades',
+        'producto': 'cat_productos',
+        'servicio': 'cat_servicios',
+        'moneda': 'cat_monedas',
     }
+    from fabric_db import get_mapa_catalogo
     for clave, tabla in tablas.items():
-        try:
-            result = db.session.execute(text(f"SELECT nombre, codigo FROM {tabla}"))
-            mapas[clave] = {row[0]: row[1] for row in result.fetchall()}
-        except Exception:
-            mapas[clave] = {}
+        mapas[clave] = get_mapa_catalogo(tabla)
     return mapas
 
 
@@ -234,15 +223,17 @@ def _mapear_tipo_perdida(nombre):
 def _mapear_estatus(estatus):
     """Mapea estatus contabilización a código RO02 (1-5)."""
     estatus_lower = (estatus or '').lower()
-    if 'descubiert' in estatus_lower or estatus == '1':
+    if estatus in ('1', '2', '3', '4', '5'):
+        return estatus
+    if 'descubiert' in estatus_lower:
         return '1'
-    elif 'contabiliz' in estatus_lower and 'pendiente' in estatus_lower or estatus == '2':
+    elif 'pendiente' in estatus_lower:
         return '2'
-    elif 'completado' in estatus_lower or 'completad' in estatus_lower or estatus == '3':
+    elif 'completado' in estatus_lower or 'finalizado' in estatus_lower:
         return '3'
-    elif 'sin perdida' in estatus_lower or 'no genera' in estatus_lower or estatus == '4':
+    elif 'sin pérdida' in estatus_lower or 'sin perdida' in estatus_lower:
         return '4'
-    elif 'desestim' in estatus_lower or estatus == '5':
+    elif 'desestim' in estatus_lower:
         return '5'
     return estatus or ''
 
@@ -292,16 +283,27 @@ def _extraer_datos_formulario(form):
         'consecuencia': form.get('consecuencia'),
         'tipo_perdida': form.get('tipo_perdida'),
         'tipo_registro': form.get('tipo_registro'),
+        'incidente_fraude': form.get('incidente_fraude'),
         'fecha_descubrimiento': form.get('fecha_descubrimiento') or None,
         'fecha_inicio_evento': form.get('fecha_inicio_evento') or None,
         'fecha_finalizacion_evento': form.get('fecha_finalizacion_evento') or None,
+        'fecha_cierre_evento': form.get('fecha_cierre_evento') or None,
         'monto_dop': form.get('monto_perdida_bruta_dop') or 0,
         'monto_recuperado_seguros': form.get('monto_recuperado_seguros') or 0,
         'monto_recuperado_otros': form.get('monto_recuperado_otros') or 0,
         'monto_moneda_origen': form.get('monto_moneda_origen') or None,
+        'tipo_moneda_ocurrencia': form.get('tipo_moneda_ocurrencia') or 'DOP',
+        'cuenta_contable_monto': form.get('cuenta_contable_monto'),
+        'fecha_contabilizacion': form.get('fecha_contabilizacion') or None,
+        'fecha_contab_recuperacion': form.get('fecha_contab_recuperacion') or None,
+        'estatus_contabilizacion': form.get('estatus_contabilizacion'),
+        'cantidad_eventos': form.get('cantidad_eventos') or 1,
         'area_origen': form.get('area_origen'),
+        'localidad_origen': form.get('localidad_origen'),
         'linea_negocios': form.get('linea_negocios'),
         'proceso_afectado': form.get('proceso_afectado'),
+        'producto_afectado': form.get('producto_afectado'),
+        'servicio_afectado': form.get('servicio_afectado'),
         'codigo_riesgo_asociado': form.get('codigo_riesgo_asociado'),
         'aplica_plan_accion': True if form.get('aplica_plan_accion') else False,
         'canal_distribucion_afectado': form.get('canal_distribucion_afectado'),
@@ -333,6 +335,11 @@ def _cargar_catalogos_eventos():
         catalogos['severidades'] = get_catalogo('cat_severidad')
         catalogos['probabilidades'] = get_catalogo('cat_probabilidad')
         catalogos['incidentes_fraude'] = get_catalogo('cat_incidentes_fraude')
+        catalogos['localidades'] = get_catalogo('cat_localidades')
+        catalogos['productos'] = get_catalogo('cat_productos')
+        catalogos['servicios'] = get_catalogo('cat_servicios')
+        catalogos['monedas'] = get_catalogo('cat_monedas')
+        catalogos['estatus_contabilizacion'] = get_catalogo('cat_estatus_contabilizacion')
     except Exception:
         pass
     return catalogos

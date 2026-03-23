@@ -164,6 +164,41 @@ CREATE TABLE IF NOT EXISTS cat_incidentes_fraude (
     activo          BOOLEAN         DEFAULT TRUE
 );
 
+CREATE TABLE IF NOT EXISTS cat_localidades (
+    localidad_id    SERIAL          PRIMARY KEY,
+    codigo          VARCHAR(10)     NOT NULL UNIQUE,
+    nombre          VARCHAR(200)    NOT NULL,
+    activo          BOOLEAN         DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS cat_productos (
+    producto_id     SERIAL          PRIMARY KEY,
+    codigo          VARCHAR(10)     NOT NULL UNIQUE,
+    nombre          VARCHAR(200)    NOT NULL,
+    activo          BOOLEAN         DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS cat_servicios (
+    servicio_id     SERIAL          PRIMARY KEY,
+    codigo          VARCHAR(10)     NOT NULL UNIQUE,
+    nombre          VARCHAR(200)    NOT NULL,
+    activo          BOOLEAN         DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS cat_monedas (
+    moneda_id       SERIAL          PRIMARY KEY,
+    codigo          VARCHAR(10)     NOT NULL UNIQUE,
+    nombre          VARCHAR(100)    NOT NULL,
+    activo          BOOLEAN         DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS cat_estatus_contabilizacion (
+    estatus_id      SERIAL          PRIMARY KEY,
+    codigo          VARCHAR(10)     NOT NULL UNIQUE,
+    nombre          VARCHAR(200)    NOT NULL,
+    activo          BOOLEAN         DEFAULT TRUE
+);
+
 -- ============================================================================
 -- TABLAS PRINCIPALES
 -- ============================================================================
@@ -177,6 +212,7 @@ CREATE TABLE IF NOT EXISTS eventos_riesgo_operacional (
     nueva_etiqueta              VARCHAR(100),
     estado_investigacion        VARCHAR(50),
     tipo_registro               VARCHAR(50),
+    incidente_fraude            VARCHAR(100),
     codigo_riesgo_asociado      VARCHAR(50),
     descripcion_riesgo          TEXT,
     nivel_riesgo_inherente      VARCHAR(20),
