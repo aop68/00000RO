@@ -1,11 +1,10 @@
 """
 Rutas CRUD para Eventos de Riesgo Operacional.
 """
-import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
-
-logger = logging.getLogger(__name__)
+from sqlalchemy import text
+from extensions import db
 
 eventos_bp = Blueprint('eventos', __name__)
 
@@ -19,8 +18,7 @@ def lista():
         from fabric_db import get_eventos
         eventos = get_eventos()
     except Exception as e:
-        logger.error("Error al obtener eventos: %s", e)
-        error = "Error al conectar con la base de datos. Intente de nuevo más tarde."
+        error = f"Error al conectar con la base de datos: {str(e)}"
     return render_template('eventos/lista.html', eventos=eventos, error=error)
 
 
@@ -40,8 +38,7 @@ def nuevo():
             flash('Evento creado exitosamente.', 'success')
             return redirect(url_for('eventos.lista'))
         except Exception as e:
-            logger.error("Error al crear evento: %s", e)
-            flash('Error al crear evento. Verifique los datos e intente de nuevo.', 'danger')
+            flash(f'Error al crear evento: {str(e)}', 'danger')
 
     catalogos = _cargar_catalogos_eventos()
     return render_template('eventos/formulario.html', evento=None, catalogos=catalogos)
@@ -57,8 +54,7 @@ def editar(evento_id):
     try:
         from fabric_db import get_evento, actualizar_evento
     except Exception as e:
-        logger.error("Error de conexión al editar evento: %s", e)
-        flash('Error de conexión con la base de datos.', 'danger')
+        flash(f'Error de conexión: {str(e)}', 'danger')
         return redirect(url_for('eventos.lista'))
 
     if request.method == 'POST':
@@ -69,8 +65,7 @@ def editar(evento_id):
             flash('Evento actualizado exitosamente.', 'success')
             return redirect(url_for('eventos.lista'))
         except Exception as e:
-            logger.error("Error al actualizar evento %s: %s", evento_id, e)
-            flash('Error al actualizar evento. Verifique los datos e intente de nuevo.', 'danger')
+            flash(f'Error al actualizar: {str(e)}', 'danger')
 
     evento = get_evento(evento_id)
     if not evento:
@@ -93,8 +88,17 @@ def siguiente_codigo():
     mm = mes.zfill(2)
     prefijo = f'E-{yy}{mm}-'
     try:
-        from fabric_db import get_siguiente_codigo
-        codigo = get_siguiente_codigo(prefijo)
+        result = db.session.execute(
+            text("SELECT codigo_evento FROM eventos_riesgo_operacional WHERE codigo_evento LIKE :prefijo ORDER BY codigo_evento DESC LIMIT 1"),
+            {'prefijo': prefijo + '%'}
+        )
+        row = result.fetchone()
+        if row:
+            ultimo = row[0]
+            seq = int(ultimo.split('-')[-1]) + 1
+        else:
+            seq = 1
+        codigo = f'{prefijo}{seq:03d}'
     except Exception:
         codigo = f'{prefijo}001'
     return jsonify({'codigo': codigo})
@@ -112,8 +116,17 @@ def reporte_ro02():
 
     try:
         # Obtener eventos del periodo
-        from fabric_db import get_eventos_por_periodo
-        eventos = get_eventos_por_periodo(anio, mes)
+        result = db.session.execute(
+            text("""
+                SELECT * FROM eventos_riesgo_operacional
+                WHERE EXTRACT(YEAR FROM fecha_descubrimiento) = :anio
+                  AND EXTRACT(MONTH FROM fecha_descubrimiento) = :mes
+                ORDER BY codigo_evento
+            """),
+            {'anio': int(anio), 'mes': int(mes)}
+        )
+        columns = result.keys()
+        eventos = [dict(zip(columns, row)) for row in result.fetchall()]
 
         # Cargar catálogos para mapear nombre → código
         catalogos_map = _cargar_mapas_catalogos()
@@ -178,8 +191,7 @@ def reporte_ro02():
             headers={'Content-Disposition': f'attachment; filename={nombre_archivo}'}
         )
     except Exception as e:
-        logger.error("Error al generar reporte RO02: %s", e)
-        flash('Error al generar el reporte. Intente de nuevo más tarde.', 'danger')
+        flash(f'Error al generar reporte: {str(e)}', 'danger')
         return redirect(url_for('eventos.lista'))
 
 
@@ -202,9 +214,12 @@ def _cargar_mapas_catalogos():
         'servicio': 'cat_servicios',
         'moneda': 'cat_monedas',
     }
-    from fabric_db import get_mapa_catalogo
     for clave, tabla in tablas.items():
-        mapas[clave] = get_mapa_catalogo(tabla)
+        try:
+            result = db.session.execute(text(f"SELECT nombre, codigo FROM {tabla}"))
+            mapas[clave] = {row[0]: row[1] for row in result.fetchall()}
+        except Exception:
+            mapas[clave] = {}
     return mapas
 
 
