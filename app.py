@@ -1,16 +1,15 @@
 """
-Aplicación principal - Gestión de Riesgo Operacional.
+Aplicacion principal - Gestion de Riesgo Operacional.
 """
 import os
 from flask import Flask
 from config import config
-from extensions import db, login_manager
+from extensions import db, login_manager, csrf
 from models import User
-from sqlalchemy import text
 
 
 def create_app(config_name=None):
-    """Factory de la aplicación Flask."""
+    """Factory de la aplicacion Flask."""
     if config_name is None:
         config_name = os.environ.get('FLASK_CONFIG', 'default')
 
@@ -20,6 +19,7 @@ def create_app(config_name=None):
     # Inicializar extensiones
     db.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -44,96 +44,35 @@ def create_app(config_name=None):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(reportes_bp, url_prefix='/reportes')
 
-    # Liberar sesión de SQLAlchemy después de cada request
+    # Headers de seguridad HTTP
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com cdn.datatables.net; "
+            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdn.datatables.net; "
+            "font-src 'self' cdn.jsdelivr.net; "
+            "img-src 'self' data:; "
+            "frame-src app.powerbi.com; "
+            "connect-src 'self'"
+        )
+        return response
+
+    # Liberar sesion de SQLAlchemy despues de cada request
     @app.teardown_appcontext
     def shutdown_session(exception=None):
         db.session.remove()
 
-    # Crear tablas y datos iniciales
+    # Crear tabla de usuarios local y admin por defecto
     with app.app_context():
         db.create_all()
-        _init_fabric_tables(app)
         _crear_admin_default()
 
     return app
-
-
-def _init_fabric_tables(app):
-    """Crea las tablas de riesgo operacional y carga datos iniciales
-    usando psycopg2 directamente para ejecutar scripts SQL completos."""
-    import psycopg2
-
-    db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
-    if 'sqlite' in db_url:
-        app.logger.info('Base de datos SQLite detectada, omitiendo tablas Fabric.')
-        return
-
-    migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
-
-    # Parsear la URL de conexión para psycopg2
-    # Formato: postgresql://user:pass@host:port/dbname
-    try:
-        conn = psycopg2.connect(db_url)
-        conn.autocommit = True
-        cur = conn.cursor()
-    except Exception as e:
-        app.logger.error(f'No se pudo conectar con psycopg2: {e}')
-        return
-
-    try:
-        # 1. Ejecutar schema completo
-        schema_file = os.path.join(migrations_dir, 'init_schema.sql')
-        if os.path.exists(schema_file):
-            try:
-                with open(schema_file, 'r', encoding='utf-8') as f:
-                    schema_sql = f.read()
-                cur.execute(schema_sql)
-                app.logger.info('Schema de tablas Fabric creado correctamente.')
-            except Exception as e:
-                app.logger.error(f'Error creando schema Fabric: {e}')
-                # Intentar cerrar y reconectar
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-                return
-
-        # 2. Verificar si ya hay datos en los catálogos
-        try:
-            cur.execute("SELECT COUNT(*) FROM cat_tipo_evento_ro02")
-            count = cur.fetchone()[0]
-        except Exception:
-            count = 0
-
-        # 3. Cargar seed data si los catálogos están vacíos
-        if count == 0:
-            seed_file = os.path.join(migrations_dir, 'seed_data.sql')
-            if os.path.exists(seed_file):
-                with open(seed_file, 'r', encoding='utf-8') as f:
-                    seed_sql = f.read()
-                # Ejecutar statement por statement para mayor robustez
-                ok_count = 0
-                err_count = 0
-                for raw_stmt in seed_sql.split(';'):
-                    # Limpiar comentarios
-                    lines = [l for l in raw_stmt.split('\n')
-                             if not l.strip().startswith('--')]
-                    stmt = '\n'.join(lines).strip()
-                    if stmt:
-                        try:
-                            cur.execute(stmt)
-                            ok_count += 1
-                        except Exception as e:
-                            app.logger.warning(f'Seed stmt omitido: {e}')
-                            err_count += 1
-                app.logger.info(
-                    f'Seed data: {ok_count} OK, {err_count} errores.')
-        else:
-            app.logger.info(f'Catálogos ya contienen {count} registros, omitiendo seed.')
-
-    finally:
-        cur.close()
-        conn.close()
 
 
 def _crear_admin_default():
@@ -156,4 +95,4 @@ def _crear_admin_default():
 if __name__ == '__main__':
     app = create_app()
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)
